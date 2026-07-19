@@ -716,6 +716,23 @@
       }
     });
 
+    const copyCodeBtn = document.getElementById("copy-code-btn");
+    if (copyCodeBtn) {
+      copyCodeBtn.addEventListener("click", () => {
+        const codeValueEl = document.getElementById("gameover-code-value");
+        if (codeValueEl) {
+          const textToCopy = codeValueEl.innerText;
+          navigator.clipboard.writeText(textToCopy).then(() => {
+            copyCodeBtn.innerText = "COPIED";
+            setTimeout(() => { copyCodeBtn.innerText = "COPY"; }, 2000);
+          }).catch(() => {
+            copyCodeBtn.innerText = "COPIED";
+            setTimeout(() => { copyCodeBtn.innerText = "COPY"; }, 2000);
+          });
+        }
+      });
+    }
+
     function startMainGameplay() {
       // Setup Initial State
       score = 0;
@@ -1820,6 +1837,25 @@
         addLog(`NEW RECORD INJECTED: ${highScore} CORES!`);
       }
       document.getElementById("final-highscore").innerText = highScore;
+
+      // Check score thresholds for terminal codes
+      const codeContainer = document.getElementById("gameover-code-container");
+      const codeValue = document.getElementById("gameover-code-value");
+      if (codeContainer && codeValue) {
+        if (score >= 250) {
+          codeValue.innerText = "hacknslash-93652";
+          codeContainer.classList.remove("hidden");
+        } else if (score >= 100) {
+          codeValue.innerText = "hacknslash-48201";
+          codeContainer.classList.remove("hidden");
+        } else if (score >= 25) {
+          codeValue.innerText = "hacknslash-71935";
+          codeContainer.classList.remove("hidden");
+        } else {
+          codeContainer.classList.add("hidden");
+        }
+        lucide.createIcons();
+      }
 
       synth.playGameOver();
       addLog("FIREWALL COLLAPSED. SIGNAL BROKEN.");

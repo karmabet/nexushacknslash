@@ -1056,7 +1056,7 @@ export default function App() {
         }
       }
 
-      // Update Rogue Nodes animations & AI Chasing behaviors
+      // Update Rogue Nodes animations & movement tracking behaviors
       enemies.current.forEach(enemy => {
         // Rotations
         enemy.core.rotation.x += delta * 1.6;
@@ -1068,7 +1068,7 @@ export default function App() {
         // Bobbing floating sine wave
         enemy.group.position.y = enemy.baseY + Math.sin(totalTime * 3.2 + enemy.floatOffset) * 0.75;
 
-        // AI Chasing Vector logic
+        // Movement tracking Vector logic
         const vectorToPlayer = new THREE.Vector3().subVectors(camera.position, enemy.group.position);
         vectorToPlayer.y = 0; // Lock to float-plane
         const distToPlayer = vectorToPlayer.length();

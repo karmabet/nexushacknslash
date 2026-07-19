@@ -316,6 +316,23 @@
           </div>
         </div>
 
+        <!-- Terminal code unlock notification -->
+        <div id="gameover-code-container" class="hidden mb-6 p-4 bg-slate-950 border border-emerald-500/30 rounded text-left font-mono text-xs text-emerald-400 border-glow-green">
+          <div class="flex items-center gap-2 mb-2 text-emerald-300 font-bold uppercase tracking-wider text-[11px]">
+            <i data-lucide="unlock" class="w-4 h-4 text-emerald-400 animate-pulse"></i>
+            <span>TERMINAL CODE UNLOCKED</span>
+          </div>
+          <p class="text-slate-300 leading-relaxed mb-3 text-[11px]">
+            Use this code in the nexushacker terminal to get free BTC and add a bot to your botnet:
+          </p>
+          <div class="flex items-center justify-between bg-slate-900 border border-emerald-500/20 px-3 py-2 rounded">
+            <span id="gameover-code-value" class="text-sm font-bold tracking-widest text-emerald-300 select-all"></span>
+            <button id="copy-code-btn" type="button" class="text-[10px] text-emerald-400/80 hover:text-emerald-300 px-2.5 py-1 bg-slate-800/40 rounded border border-emerald-500/20 hover:border-emerald-500/40 cursor-pointer transition-all">
+              COPY
+            </button>
+          </div>
+        </div>
+
         <!-- Restart Button -->
         <button id="reboot-btn" class="w-full py-4 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white font-bold tracking-widest rounded-lg shadow-lg hover:shadow-red-500/20 active:scale-[0.98] transition-all cursor-pointer uppercase text-sm border-glow-red flex items-center justify-center gap-2">
           <i data-lucide="refresh-cw" class="w-4 h-4"></i>
