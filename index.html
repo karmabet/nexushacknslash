@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEXUS HACKnSLASH - 3D Sci-Fi Cyber Shooter</title>
+  <meta name="description" content="NEXUS HACKnSLASH - Enter the futuristic cyber neon arena in this 3D browser game built with Three.js. Shoot core nodes, dodge rolling neon cubes & triangles, and climb the scoreboard." />
+  <meta name="keywords" content="NEXUS, Hack n Slash, 3D Game, Browser Game, Three.js, WebGL, Cyberpunk, Neon, Sci-Fi Shooter, Cyber Blaster" />
+  <meta name="author" content="NEXUS Cyber Labs" />
+  <meta name="theme-color" content="#030108" />
+  <meta name="robots" content="index, follow" />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="NEXUS HACKnSLASH - 3D Cyber Shooter" />
+  <meta property="og:description" content="Intense 3D browser-based neon shooter. Destroy rogue cores, dodge rolling geometry obstacles, and conquer the cyberspace grid." />
+  <meta property="og:image" content="https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=600" />
+  
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:title" content="NEXUS HACKnSLASH - 3D Cyber Shooter" />
+  <meta property="twitter:description" content="Intense 3D browser-based neon shooter. Destroy rogue cores, dodge rolling geometry obstacles, and conquer cyberspace." />
+  <meta property="twitter:image" content="https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=600" />
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Tailwind Custom Config -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Orbitron', 'sans-serif'],
+            mono: ['"Share Tech Mono"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      --theme-color: #00f0ff;
+      --theme-color-rgb: 6, 182, 212;
+      --theme-color-dark-rgb: 8, 47, 73;
+    }
+
+    /* Custom Neon Shadows and Glows */
+    .glow-cyan, .glow-theme {
+      text-shadow: 0 0 5px var(--theme-color), 0 0 10px rgba(var(--theme-color-rgb), 0.5), 0 0 20px rgba(var(--theme-color-rgb), 0.25) !important;
+    }
+    .glow-pink {
+      text-shadow: 0 0 5px rgba(236, 72, 153, 0.6), 0 0 10px rgba(236, 72, 153, 0.4), 0 0 20px rgba(236, 72, 153, 0.2);
+    }
+    .glow-red {
+      text-shadow: 0 0 5px rgba(239, 68, 68, 0.6), 0 0 10px rgba(239, 68, 68, 0.4);
+    }
+    .border-glow-cyan, .border-glow-theme {
+      box-shadow: 0 0 12px var(--theme-color), inset 0 0 6px rgba(var(--theme-color-rgb), 0.3) !important;
+    }
+    .border-glow-pink {
+      box-shadow: 0 0 12px rgba(236, 72, 153, 0.45), inset 0 0 6px rgba(236, 72, 153, 0.2);
+    }
+    .border-glow-green {
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.45), inset 0 0 6px rgba(34, 197, 94, 0.2);
+    }
+
+    /* Redefine Tailwind Cyan Color Utilities dynamically */
+    .text-cyan-400, .text-cyan-300, .text-theme {
+      color: var(--theme-color) !important;
+    }
+    .border-cyan-500\/30, .border-cyan-400 {
+      border-color: rgba(var(--theme-color-rgb), 0.4) !important;
+    }
+    .bg-cyan-950\/40 {
+      background-color: rgba(var(--theme-color-dark-rgb), 0.45) !important;
+    }
+    .bg-cyan-500\/20 {
+      background-color: rgba(var(--theme-color-rgb), 0.2) !important;
+    }
+
+    /* Scrollbar Styling for Hacker Terminal */
+    .hacker-scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+    .hacker-scroll::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.3);
+    }
+    .hacker-scroll::-webkit-scrollbar-thumb {
+      background: rgba(var(--theme-color-rgb), 0.4) !important;
+      border-radius: 2px;
+    }
+    .hacker-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(var(--theme-color-rgb), 0.7) !important;
+    }
+
+    /* Slow rotating animation for gear/settings icon */
+    @keyframes spin-slow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .animate-spin-slow {
+      animation: spin-slow 10s linear infinite;
+    }
+
+    /* Glitch Animation */
+    @keyframes cyber-glitch {
+      0% { transform: translate(0) }
+      20% { transform: translate(-2px, 2px) }
+      40% { transform: translate(-2px, -2px) }
+      60% { transform: translate(2px, 2px) }
+      80% { transform: translate(2px, -2px) }
+      100% { transform: translate(0) }
+    }
+    .animate-glitch {
+      animation: cyber-glitch 1.2s infinite;
+    }
+  </style>
+
+  <!-- Three.js + Postprocessing CDNs (All in compatible r128 version) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
+  
+  <!-- Post-processing pipeline -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+  
+  <!-- Shaders -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+  
+  <!-- Unreal Bloom Pass -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+</head>
+<body class="bg-[#030108] text-white overflow-hidden w-screen h-screen font-sans select-none">
+
+  <!-- 3D WebGL Canvas Container -->
+  <div id="canvas-container" class="absolute inset-0 w-full h-full z-0"></div>
+
+  <!-- Reticle / Crosshair for standard FPS targeting -->
+  <div id="crosshair" class="absolute inset-0 pointer-events-none flex items-center justify-center z-10 hidden">
+    <div class="relative flex items-center justify-center">
+      <div class="w-1.5 h-1.5 bg-cyan-400 rounded-full shadow-[0_0_8px_#00f0ff]"></div>
+      <div class="absolute w-5 h-[2px] bg-cyan-400/50"></div>
+      <div class="absolute w-[2px] h-5 bg-cyan-400/50"></div>
+      <div class="absolute w-8 h-8 border border-cyan-400/20 rounded-full animate-pulse"></div>
+    </div>
+  </div>
+
+  <!-- Screen Red Flash Overlay for Damage notification -->
+  <div id="damage-overlay" class="absolute inset-0 pointer-events-none z-20 bg-red-600/0 transition-all duration-150"></div>
+
+  <!-- TOUCH CONTROLS OVERLAY -->
+  <div id="touch-controls" class="absolute inset-0 pointer-events-none z-30 hidden">
+    <!-- Left Joystick Area (takes pointer events) -->
+    <div id="joystick-zone" class="absolute bottom-10 left-10 w-28 h-28 rounded-full border border-cyan-500/30 bg-slate-950/40 backdrop-blur-sm pointer-events-auto flex items-center justify-center touch-none">
+      <div id="joystick-knob" class="w-10 h-10 rounded-full bg-cyan-400/80 shadow-[0_0_12px_#00f0ff] transition-transform duration-75 ease-out"></div>
+    </div>
+
+    <!-- Right Action Buttons (takes pointer events) -->
+    <div class="absolute bottom-10 right-10 flex flex-col items-center gap-4 pointer-events-auto touch-none">
+      <!-- Shoot Button -->
+      <button id="touch-shoot-btn" class="w-16 h-16 rounded-full bg-red-500/25 border-2 border-red-500 text-red-400 font-bold tracking-wider flex items-center justify-center shadow-[0_0_15px_rgba(239,68,68,0.4)] active:scale-95 active:bg-red-500/50 transition-all select-none">
+        <i data-lucide="crosshair" class="w-8 h-8"></i>
+      </button>
+      
+      <!-- Jump Button -->
+      <button id="touch-jump-btn" class="w-12 h-12 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300 font-bold text-xs tracking-wide flex items-center justify-center shadow-[0_0_10px_rgba(6,182,212,0.3)] active:scale-95 active:bg-cyan-500/40 transition-all select-none">
+        JUMP
+      </button>
+    </div>
+  </div>
+
+  <!-- SOUND STATUS BUTTON -->
+  <button id="sound-toggle-btn" class="absolute top-6 left-1/2 -translate-x-1/2 z-30 hidden backdrop-blur-md bg-slate-950/40 border border-cyan-500/30 text-cyan-400 px-4 py-2 rounded-full font-mono text-xs border-glow-cyan hover:bg-cyan-950/30 transition-all cursor-pointer flex items-center gap-2">
+    <i data-lucide="volume-2" class="w-4 h-4"></i>
+    <span>AUDIO: ON</span>
+  </button>
+
+  <!-- OVERLAY 1: START SCREEN / BREACH PROTOCOL -->
+  <div id="start-overlay" class="absolute inset-0 z-40 flex items-center justify-center bg-[#04010e]/90 backdrop-blur-md transition-all duration-500">
+    <div class="max-w-lg w-full mx-4 bg-slate-950/70 border border-cyan-500/30 p-8 rounded-xl border-glow-cyan text-center relative overflow-hidden">
+      <!-- Grid backdrop styling -->
+      <div class="absolute inset-0 bg-[linear-gradient(rgba(6,182,212,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(6,182,212,0.05)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none"></div>
+
+      <div class="relative z-10">
+        <!-- Badge -->
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-cyan-950/40 border border-cyan-500/30 rounded text-cyan-400 text-xs font-mono tracking-widest mb-6">
+          <i data-lucide="shield-alert" class="w-3.5 h-3.5 animate-pulse"></i>
+          <span>SECURE PROTOCOL UPLINK</span>
+        </div>
+
+        <!-- Title -->
+        <h1 class="text-3xl sm:text-4xl font-black tracking-wider mb-2 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-400 to-pink-500 font-sans">
+          NEXUS HACKnSLASH SIMULATION
+        </h1>
+        <p class="font-mono text-xs text-slate-400 mb-8 uppercase tracking-widest">
+          SYS_VIRUS_KILL_SIMULATOR v1.42
+        </p>
+
+        <!-- Cyberpunk Tech Specs Description -->
+        <div class="bg-slate-950/90 border border-cyan-500/10 rounded-lg p-4 mb-8 text-left font-mono text-xs space-y-2 text-slate-300">
+          <div class="flex justify-between border-b border-cyan-500/10 pb-1.5 text-cyan-400">
+            <span>DIAG_PARAMETER</span>
+            <span>SPEC_VALUE</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">SYSTEM STABILITY</span>
+            <span class="text-emerald-400">99.98% READY</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">HOSTILE NODE TYPE</span>
+            <span class="text-pink-400">ROGUE_OCTA_CORES</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">CYBER DECK WEAPON</span>
+            <span class="text-cyan-400">CYBER_BLASTER (INF)</span>
+          </div>
+          <div class="flex justify-between pt-1 border-t border-cyan-500/10">
+            <span class="text-slate-500">HARDWARE CONTROLS</span>
+            <span class="text-white text-right">WASD + MOUSE PURGE</span>
+          </div>
+        </div>
+
+        <!-- CONTROL MODE SELECTION -->
+        <div class="mb-6 text-left font-mono text-xs">
+          <span class="text-slate-500 block mb-2 tracking-widest text-center uppercase text-[10px]">Select Control Mode:</span>
+          <div class="grid grid-cols-3 gap-2">
+            <button type="button" id="control-free-btn" class="py-2.5 px-1.5 rounded-lg border text-[10px] font-bold transition-all text-center flex flex-col items-center justify-center gap-0.5 cursor-pointer bg-cyan-500/20 text-cyan-300 border-cyan-400 border-glow-cyan">
+              <span>FREE MOUSE</span>
+              <span class="text-[7px] text-cyan-300/60 font-normal leading-none">Drag to look</span>
+            </button>
+            <button type="button" id="control-lock-btn" class="py-2.5 px-1.5 rounded-lg border text-[10px] font-bold transition-all text-center flex flex-col items-center justify-center gap-0.5 cursor-pointer bg-slate-950/20 border-slate-800 text-slate-500 hover:text-slate-400 hover:border-slate-700">
+              <span>MOUSE-LOCK</span>
+              <span class="text-[7px] text-slate-500 font-normal leading-none">FPS cursor lock</span>
+            </button>
+            <button type="button" id="control-touch-btn" class="py-2.5 px-1.5 rounded-lg border text-[10px] font-bold transition-all text-center flex flex-col items-center justify-center gap-0.5 cursor-pointer bg-slate-950/20 border-slate-800 text-slate-500 hover:text-slate-400 hover:border-slate-700">
+              <span>TOUCH MODE</span>
+              <span class="text-[7px] text-slate-500 font-normal leading-none">Virtual stick</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Start Button -->
+        <button id="initialize-btn" class="w-full py-4 bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-400 hover:to-sky-500 text-slate-950 font-bold tracking-widest rounded-lg shadow-lg hover:shadow-cyan-500/20 active:scale-[0.98] transition-all cursor-pointer uppercase text-sm border-glow-cyan">
+          ESTABLISH CONNECTION
+        </button>
+
+        <!-- Settings Toggle Button (Pauses/Start Screen) -->
+        <button id="settings-toggle-btn" class="w-full mt-3 py-2.5 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/20 rounded-lg text-xs font-mono uppercase tracking-widest cursor-pointer transition-all flex items-center justify-center gap-2 border-glow-cyan">
+          <i data-lucide="settings" class="w-3.5 h-3.5 animate-spin-slow"></i>
+          <span>SYSTEM_COLORWAYS</span>
+        </button>
+
+        <!-- Theme Selection Settings Menu Panel -->
+        <div id="settings-panel" class="hidden mt-3 p-3 bg-slate-950/90 border border-cyan-500/20 rounded-lg text-left font-mono text-xs">
+          <div class="text-[9px] text-slate-500 mb-2.5 uppercase tracking-widest text-center">SELECT SYS_CORE COLORWAY:</div>
+          <div class="grid grid-cols-5 gap-1.5" id="theme-buttons-container"></div>
+        </div>
+
+        <p class="mt-4 text-[10px] text-slate-500 font-mono tracking-wide">
+          * MOUSE-LOCK REQUIRES BROWSER PERMISSION // USE FREE MOUSE IN CASE OF ISSUES
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- OVERLAY 2: GAME OVER / DISCONNECT SCREEN -->
+  <div id="gameover-overlay" class="absolute inset-0 z-40 hidden flex items-center justify-center bg-[#0a0202]/95 backdrop-blur-md transition-all duration-500">
+    <div class="max-w-md w-full mx-4 bg-slate-950/80 border border-red-500/30 p-8 rounded-xl border-glow-red text-center relative overflow-hidden">
+      <!-- Grid backdrop styling -->
+      <div class="absolute inset-0 bg-[linear-gradient(rgba(239,68,68,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(239,68,68,0.03)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none"></div>
+
+      <div class="relative z-10">
+        <!-- Warning Badge -->
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-red-950/40 border border-red-500/30 rounded text-red-500 text-xs font-mono tracking-widest mb-6 animate-pulse">
+          <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+          <span>CONNECTION SEVERED</span>
+        </div>
+
+        <!-- Title -->
+        <h2 class="text-3xl font-black tracking-wider mb-2 text-red-500 glow-red">
+          DECK_CRASHED
+        </h2>
+        <p class="font-mono text-xs text-slate-500 mb-8 uppercase tracking-widest">
+          FIREWALL BREACHED // PURGE INCOMPLETE
+        </p>
+
+        <!-- Stats readout -->
+        <div class="grid grid-cols-2 gap-4 mb-8 font-mono text-left">
+          <div class="bg-slate-950 p-3 rounded border border-red-500/10">
+            <span class="text-[10px] text-slate-500 block">TOTAL PURGES</span>
+            <span id="final-score" class="text-2xl font-bold text-red-500">0</span>
+          </div>
+          <div class="bg-slate-950 p-3 rounded border border-red-500/10">
+            <span class="text-[10px] text-slate-500 block">TIME ACTIVE</span>
+            <span id="final-time" class="text-2xl font-bold text-red-400">00:00</span>
+          </div>
+          <div class="bg-slate-950 p-3 rounded border border-red-500/10">
+            <span class="text-[10px] text-slate-500 block">WEAPON ACCURACY</span>
+            <span id="final-accuracy" class="text-2xl font-bold text-cyan-400">100%</span>
+          </div>
+          <div class="bg-slate-950 p-3 rounded border border-red-500/10">
+            <span class="text-[10px] text-slate-500 block">RECORD PURGES</span>
+            <span id="final-highscore" class="text-2xl font-bold text-pink-500">0</span>
+          </div>
+        </div>
+
+        <!-- Restart Button -->
+        <button id="reboot-btn" class="w-full py-4 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white font-bold tracking-widest rounded-lg shadow-lg hover:shadow-red-500/20 active:scale-[0.98] transition-all cursor-pointer uppercase text-sm border-glow-red flex items-center justify-center gap-2">
+          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+          <span>REBOOT DECK & INJECT</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HUD IN-GAME OVERLAYS (ULTRA-MINIMALIST CYBERPUNK) -->
+  <div id="hud-overlay" class="absolute inset-x-0 top-0 pointer-events-none z-30 hidden p-6 flex justify-between items-start font-sans">
+    
+    <!-- LEFT: KILLS / CORES -->
+    <div class="flex flex-col">
+      <span class="text-[10px] text-cyan-400/70 tracking-widest uppercase font-mono">CORES PURGED</span>
+      <div class="flex items-baseline gap-2">
+        <span id="hud-score" class="text-4xl font-black text-cyan-400 tracking-wider glow-cyan">0</span>
+        <span class="text-[10px] text-slate-500 font-mono uppercase">CORES</span>
+      </div>
+      <!-- Highscore & Time under the score, very subtle -->
+      <span class="text-[10px] text-slate-400/60 font-mono mt-0.5">BEST: <span id="hud-highscore" class="text-pink-400">0</span> &nbsp;|&nbsp; TIME: <span id="hud-time" class="text-cyan-400">00:00</span></span>
+    </div>
+
+    <!-- RIGHT: SHIELD INTEGRITY -->
+    <div class="flex flex-col items-end w-48 sm:w-64">
+      <div class="flex justify-between items-center w-full mb-1">
+        <span class="text-[10px] text-pink-400/70 tracking-widest uppercase font-mono">SHIELD INTEGRITY</span>
+        <span id="hud-health-text" class="text-xs font-bold font-mono text-cyan-400">100%</span>
+      </div>
+      <!-- Sleek health bar -->
+      <div class="w-full bg-slate-950/80 rounded h-2.5 p-[1px] border border-pink-500/20">
+        <div id="hud-health-bar" class="h-full rounded-sm bg-gradient-to-r from-emerald-500 to-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.5)] transition-all duration-150" style="width: 100%"></div>
+      </div>
+      <span id="hud-integrity-warning" class="text-[9px] text-red-500 bg-red-950/60 px-1 py-0.5 rounded border border-red-500/30 mt-1 hidden animate-pulse font-mono">CRITICAL SHIELD BREACH</span>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM HINT FOR CONTROLS -->
+  <div id="hud-controls-hint" class="absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-none z-30 hidden text-center font-mono text-[10px] text-slate-500/80 tracking-wider uppercase">
+    <span>WASD: Move | Mouse: Look & Shoot | SPACE: Jump</span>
+  </div>
+
+  <!-- SECURED SCRIPT ENGINE - COMPILED & OBFUSCATED MODULE -->
+  <script type="module" src="/src/game.js"></script>
+</body>
+</html>

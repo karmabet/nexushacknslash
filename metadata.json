@@ -1,0 +1,6 @@
+{
+  "name": "NEXUS HACKnSLASH SIMULATION",
+  "description": "A browser-based 3D first-person shooter mini-game in a cyber hacker cyberspace setting featuring Three.js, UnrealBloom post-processing, and dynamic controls.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
