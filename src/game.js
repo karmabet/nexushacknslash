@@ -169,7 +169,7 @@
     let gameOver = false;
     let isLocked = false;
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-    let controlMode = isTouchDevice ? 'touch' : 'free';
+    let controlMode = isTouchDevice ? 'touch' : 'lock';
     let usePointerLock = controlMode === 'lock';
     
     // Joystick and touch state variables
@@ -376,11 +376,20 @@
       }
     ];
 
-    let currentTheme = COLOR_THEMES[0];
-    const savedThemeId = localStorage.getItem("cyber_shooter_theme") || "cyan";
-    const foundTheme = COLOR_THEMES.find(t => t.id === savedThemeId);
-    if (foundTheme) {
-      currentTheme = foundTheme;
+    // First access check: choose a random theme on initial access or first visit
+    const isFirstAccess = !localStorage.getItem("cyber_shooter_visited") || !sessionStorage.getItem("cyber_shooter_session");
+    let currentTheme;
+
+    if (isFirstAccess) {
+      const randomIndex = Math.floor(Math.random() * COLOR_THEMES.length);
+      currentTheme = COLOR_THEMES[randomIndex];
+      localStorage.setItem("cyber_shooter_theme", currentTheme.id);
+      localStorage.setItem("cyber_shooter_visited", "true");
+      sessionStorage.setItem("cyber_shooter_session", "true");
+    } else {
+      const savedThemeId = localStorage.getItem("cyber_shooter_theme");
+      const foundTheme = COLOR_THEMES.find(t => t.id === savedThemeId);
+      currentTheme = foundTheme || COLOR_THEMES[Math.floor(Math.random() * COLOR_THEMES.length)];
     }
 
     // Material references for real-time dynamic recoloring
@@ -1324,6 +1333,17 @@
           const btn = startOverlay.querySelector("button");
           if (title) title.innerText = "UPLINK_PAUSED";
           if (btn) btn.innerText = "RESUME PROTOCOL";
+        }
+      });
+
+      // Canvas / Overlay click handler to easily re-acquire Mouse Lock during active game
+      window.addEventListener("click", (e) => {
+        if (usePointerLock && gameStarted && !gameOver && !isLocked) {
+          if (settingsPanel && settingsPanel.contains(e.target)) return;
+          if (settingsToggleBtn && settingsToggleBtn.contains(e.target)) return;
+          if (controls) {
+            try { controls.lock(); } catch (err) {}
+          }
         }
       });
 

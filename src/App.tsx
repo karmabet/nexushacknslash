@@ -1518,7 +1518,7 @@ export default function App() {
             {/* Terminal Header */}
             <div className="flex items-center justify-center gap-2 mb-4 text-cyan-400">
               <Terminal size={24} className="animate-pulse" />
-              <span className="font-mono text-xs tracking-widest text-cyan-400/80">DECK_PORTAL v4.28</span>
+              <span className="font-mono text-xs tracking-widest text-cyan-400/80">DECK_PORTAL v1.5</span>
             </div>
 
             {/* Glowing Cyberspace Logo */}
