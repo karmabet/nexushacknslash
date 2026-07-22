@@ -591,19 +591,26 @@
       enemies.forEach(e => {
         if (e.isRare) {
           if (e.core && e.core.material) {
-            e.core.material.color.setHex(theme.colorHexSecondary);
-            e.core.material.emissive.setHex(theme.colorHex);
+            e.core.material.emissive.setHex(theme.colorHexSecondary);
           }
           if (e.outerRing && e.outerRing.material) {
             e.outerRing.material.color.setHex(theme.colorHex);
-            e.outerRing.material.emissive.setHex(theme.colorHexSecondary);
+            e.outerRing.material.emissive.setHex(theme.colorHex);
+          }
+          if (e.innerRing && e.innerRing.material) {
+            e.innerRing.material.color.setHex(theme.colorHexSecondary);
+            e.innerRing.material.emissive.setHex(theme.colorHexSecondary);
           }
         } else {
           if (e.core && e.core.material) {
             e.core.material.emissive.setHex(theme.colorHexSecondary);
           }
           if (e.outerRing && e.outerRing.material) {
-            e.outerRing.material.emissive.setHex(theme.colorHexSecondary);
+            e.outerRing.material.color.setHex(theme.colorHex);
+            e.outerRing.material.emissive.setHex(theme.colorHex);
+          }
+          if (e.symbolSprite && e.symbolSprite.material) {
+            e.symbolSprite.material.emissive.setHex(theme.colorHex);
           }
           // Redraw standard enemy canvas in real-time
           if (e.canvas && e.char && e.texture) {
@@ -611,9 +618,9 @@
             if (ctx) {
               ctx.clearRect(0, 0, 128, 128);
               ctx.shadowColor = theme.color;
-              ctx.shadowBlur = 12;
+              ctx.shadowBlur = 4;
               ctx.fillStyle = "#ffffff";
-              ctx.font = "bold 92px monospace";
+              ctx.font = "bold 88px monospace";
               ctx.textAlign = "center";
               ctx.textBaseline = "middle";
               ctx.fillText(e.char, 64, 64);
@@ -1078,78 +1085,98 @@
       const colorsList = [0x00ffcc, 0xff0055, 0x00ff33, 0xffcc00];
       const minDistance = 15;
 
+      function createDataTower(x, z, customH = null) {
+        if (Math.sqrt(x * x + z * z) < minDistance) return;
+
+        const w = 4 + Math.random() * 4;
+        const d = 4 + Math.random() * 4;
+        const h = customH || (20 + Math.random() * 26);
+
+        // Tower Mesh Standard Material (Mapped with Matrix Rain)
+        const towerGeom = new THREE.BoxGeometry(w, h, d);
+        const towerMat = new THREE.MeshStandardMaterial({
+          color: 0x05030e,
+          roughness: 0.15,
+          metalness: 0.9,
+          emissive: currentTheme.colorHex, // Dynamic theme color
+          emissiveMap: matrixTexture,
+          emissiveIntensity: 1.5
+        });
+        const groundY = getGroundHeight(x, z);
+        const towerMesh = new THREE.Mesh(towerGeom, towerMat);
+        towerMesh.position.set(x, groundY + h / 2, z);
+        scene.add(towerMesh);
+
+        // Save coordinates for boundary sliding checks
+        towers.push({
+          mesh: towerMesh,
+          minX: x - w / 2,
+          maxX: x + w / 2,
+          minZ: z - d / 2,
+          maxZ: z + d / 2
+        });
+
+        // Add Blinking Server LEDs
+        const ledCount = 3 + Math.floor(Math.random() * 6);
+        const ledGeom = new THREE.BoxGeometry(0.12, 0.12, 0.12);
+
+        for (let l = 0; l < ledCount; l++) {
+          const ledColor = colorsList[Math.floor(Math.random() * colorsList.length)];
+          const ledMat = new THREE.MeshStandardMaterial({
+            color: ledColor,
+            emissive: ledColor,
+            emissiveIntensity: 2.5,
+            roughness: 0.05,
+            metalness: 0.9
+          });
+          const ledMesh = new THREE.Mesh(ledGeom, ledMat);
+
+          const checkSide = Math.random() > 0.5;
+          const ledY = Math.random() * (h - 2) + 1;
+
+          if (checkSide) {
+            const xSide = w / 2 + 0.06;
+            const zNoise = (Math.random() - 0.5) * (d - 1);
+            ledMesh.position.set(x + (Math.random() > 0.5 ? xSide : -xSide), groundY + ledY, z + zNoise);
+          } else {
+            const zSide = d / 2 + 0.06;
+            const xNoise = (Math.random() - 0.5) * (w - 1);
+            ledMesh.position.set(x + xNoise, groundY + ledY, z + (Math.random() > 0.5 ? zSide : -zSide));
+          }
+          scene.add(ledMesh);
+
+          blinkingLeds.push({
+            mesh: ledMesh,
+            blinkSpeed: 1.5 + Math.random() * 4,
+            phase: Math.random() * Math.PI * 2
+          });
+        }
+      }
+
+      // Inner Grid Towers
       for (let col = -3; col <= 3; col++) {
         for (let row = -3; row <= 3; row++) {
           const x = col * 24 + (Math.random() - 0.5) * 8;
           const z = row * 24 + (Math.random() - 0.5) * 8;
-
-          // Stay away from central player spawning point
-          if (Math.sqrt(x * x + z * z) < minDistance) continue;
-
-          const w = 4 + Math.random() * 4;
-          const d = 4 + Math.random() * 4;
-          const h = 20 + Math.random() * 26;
-
-          // Tower Mesh Standard Material (Mapped with Matrix Rain)
-          const towerGeom = new THREE.BoxGeometry(w, h, d);
-          const towerMat = new THREE.MeshStandardMaterial({
-            color: 0x05030e,
-            roughness: 0.15,
-            metalness: 0.9,
-            emissive: currentTheme.colorHex, // Dynamic theme color
-            emissiveMap: matrixTexture,
-            emissiveIntensity: 1.5
-          });
-          const groundY = getGroundHeight(x, z);
-          const towerMesh = new THREE.Mesh(towerGeom, towerMat);
-          towerMesh.position.set(x, groundY + h / 2, z);
-          scene.add(towerMesh);
-
-          // Save coordinates for boundary sliding checks
-          towers.push({
-            mesh: towerMesh,
-            minX: x - w / 2,
-            maxX: x + w / 2,
-            minZ: z - d / 2,
-            maxZ: z + d / 2
-          });
-
-          // Add Blinking Server LEDs
-          const ledCount = 3 + Math.floor(Math.random() * 6);
-          const ledGeom = new THREE.BoxGeometry(0.12, 0.12, 0.12);
-
-          for (let l = 0; l < ledCount; l++) {
-            const ledColor = colorsList[Math.floor(Math.random() * colorsList.length)];
-            const ledMat = new THREE.MeshStandardMaterial({
-              color: ledColor,
-              emissive: ledColor,
-              emissiveIntensity: 2.5,
-              roughness: 0.05,
-              metalness: 0.9
-            });
-            const ledMesh = new THREE.Mesh(ledGeom, ledMat);
-
-            const checkSide = Math.random() > 0.5;
-            const ledY = Math.random() * (h - 2) + 1;
-
-            if (checkSide) {
-              const xSide = w / 2 + 0.06;
-              const zNoise = (Math.random() - 0.5) * (d - 1);
-              ledMesh.position.set(x + (Math.random() > 0.5 ? xSide : -xSide), groundY + ledY, z + zNoise);
-            } else {
-              const zSide = d / 2 + 0.06;
-              const xNoise = (Math.random() - 0.5) * (w - 1);
-              ledMesh.position.set(x + xNoise, groundY + ledY, z + (Math.random() > 0.5 ? zSide : -zSide));
-            }
-            scene.add(ledMesh);
-
-            blinkingLeds.push({
-              mesh: ledMesh,
-              blinkSpeed: 1.5 + Math.random() * 4,
-              phase: Math.random() * Math.PI * 2
-            });
-          }
+          createDataTower(x, z);
         }
+      }
+
+      // Border & Perimeter Towers lining the arena boundaries
+      const borderDistance = 110;
+      const borderStep = 16;
+      for (let pos = -borderDistance; pos <= borderDistance; pos += borderStep) {
+        // North & South perimeter edges
+        const heightN = 28 + Math.random() * 32;
+        const heightS = 28 + Math.random() * 32;
+        createDataTower(pos + (Math.random() - 0.5) * 4, -borderDistance + (Math.random() - 0.5) * 4, heightN);
+        createDataTower(pos + (Math.random() - 0.5) * 4, borderDistance + (Math.random() - 0.5) * 4, heightS);
+
+        // West & East perimeter edges
+        const heightW = 28 + Math.random() * 32;
+        const heightE = 28 + Math.random() * 32;
+        createDataTower(-borderDistance + (Math.random() - 0.5) * 4, pos + (Math.random() - 0.5) * 4, heightW);
+        createDataTower(borderDistance + (Math.random() - 0.5) * 4, pos + (Math.random() - 0.5) * 4, heightE);
       }
 
       // Add subtle elegant neon light pillars
@@ -1576,18 +1603,21 @@
       const group = new THREE.Group();
       const isRare = Math.random() < 0.20; // 20% chance of being the rare geometric enemy
 
-      let core, outerRing;
+      let core = null;
+      let outerRing = null;
+      let innerRing = null;
+      let symbolSprite = null;
       let enemyChar = null;
       let enemyCanvas = null;
       let enemyTexture = null;
 
       if (!isRare) {
-        // Standard Enemy: Large blue cyber code symbol
+        // Standard Enemy: Sleek faceted cyber node with a crisp floating hologram symbol
         const symbolChars = ["ｦ", "ｧ", "ｨ", "ｩ", "ｪ", "ｫ", "ｬ", "ｭ", "ｮ", "ｱ", "ｲ", "ｳ", "ｴ", "ｵ", "Ψ", "Ω", "Ξ", "★", "∑", "Ø", "Æ", "𝝵", "𝝺", "𝝿"];
         const char = symbolChars[Math.floor(Math.random() * symbolChars.length)];
         enemyChar = char;
 
-        // Generate dynamic offscreen glowing blue canvas texture
+        // Clean crisp offscreen canvas texture (no blown-out blurry glow)
         const canvas = document.createElement("canvas");
         canvas.width = 128;
         canvas.height = 128;
@@ -1595,11 +1625,11 @@
         ctx.clearRect(0, 0, 128, 128);
         enemyCanvas = canvas;
 
-        // Cyber neon-blue glow
+        // Elegant crisp neon stroke + bright sharp text fill
         ctx.shadowColor = currentTheme.color;
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = 4;
         ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 92px monospace";
+        ctx.font = "bold 88px monospace";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(char, 64, 64);
@@ -1607,51 +1637,94 @@
         const texture = new THREE.CanvasTexture(canvas);
         enemyTexture = texture;
 
-        // Standard perpendicular cross-plane geometry to give beautiful 3D volume
-        const planeGeom = new THREE.PlaneGeometry(3.2, 3.2);
-        const planeMat = new THREE.MeshStandardMaterial({
-          color: 0x051b30,
-          map: texture,
-          emissiveMap: texture,
-          emissive: currentTheme.colorHexSecondary,
-          emissiveIntensity: 3.5,
-          transparent: true,
-          opacity: 0.95,
-          side: THREE.DoubleSide,
-          depthWrite: false,
-          blending: THREE.AdditiveBlending
-        });
-
-        core = new THREE.Mesh(planeGeom, planeMat);
-        group.add(core);
-
-        outerRing = new THREE.Mesh(planeGeom.clone(), planeMat.clone());
-        outerRing.rotation.y = Math.PI / 2;
-        group.add(outerRing);
-      } else {
-        // Rare Enemy: Original animated octahedron and cage, but colored deep cyber-blue
-        const coreGeom = new THREE.OctahedronGeometry(1.2, 0); // slightly larger high-value target
+        // 1. Faceted Dark Metallic Core Body (Dodecahedron)
+        const coreGeom = new THREE.DodecahedronGeometry(0.75, 0);
         const coreMat = new THREE.MeshStandardMaterial({
-          color: currentTheme.colorHexSecondary,
-          emissive: currentTheme.colorHex,
-          emissiveIntensity: 2.8,
-          roughness: 0.1,
-          metalness: 0.8
+          color: 0x060c18,
+          metalness: 0.95,
+          roughness: 0.12,
+          emissive: currentTheme.colorHexSecondary,
+          emissiveIntensity: 0.35
         });
         core = new THREE.Mesh(coreGeom, coreMat);
         group.add(core);
 
-        const ringGeom = new THREE.TorusGeometry(1.8, 0.06, 8, 24);
+        // Crisp neon wireframe edges overlay on core
+        const coreEdgesGeom = new THREE.EdgesGeometry(coreGeom);
+        const coreEdgesMat = new THREE.LineBasicMaterial({ color: currentTheme.colorHex, linewidth: 2 });
+        const coreWireframe = new THREE.LineSegments(coreEdgesGeom, coreEdgesMat);
+        core.add(coreWireframe);
+
+        // 2. Floating Holographic Symbol inside the core
+        const planeGeom = new THREE.PlaneGeometry(1.5, 1.5);
+        const planeMat = new THREE.MeshStandardMaterial({
+          map: texture,
+          emissiveMap: texture,
+          emissive: currentTheme.colorHex,
+          emissiveIntensity: 1.1,
+          transparent: true,
+          opacity: 0.92,
+          side: THREE.DoubleSide,
+          depthWrite: false
+        });
+        symbolSprite = new THREE.Mesh(planeGeom, planeMat);
+        group.add(symbolSprite);
+
+        // 3. Elegant Outer Orbital Ring
+        const ringGeom = new THREE.TorusGeometry(1.35, 0.035, 16, 48);
         const ringMat = new THREE.MeshStandardMaterial({
           color: currentTheme.colorHex,
-          emissive: currentTheme.colorHexSecondary,
-          emissiveIntensity: 2.0,
-          wireframe: true
+          emissive: currentTheme.colorHex,
+          emissiveIntensity: 1.1,
+          metalness: 0.85,
+          roughness: 0.15
         });
         outerRing = new THREE.Mesh(ringGeom, ringMat);
-        outerRing.rotation.x = Math.random() * Math.PI;
-        outerRing.rotation.y = Math.random() * Math.PI;
+        outerRing.rotation.x = Math.PI / 4;
         group.add(outerRing);
+      } else {
+        // Rare Enemy: Polished Diamond Crystal with dual intersecting neon orbital halos
+        const coreGeom = new THREE.OctahedronGeometry(1.05, 0);
+        const coreMat = new THREE.MeshStandardMaterial({
+          color: 0x040812,
+          metalness: 0.96,
+          roughness: 0.08,
+          emissive: currentTheme.colorHexSecondary,
+          emissiveIntensity: 0.5
+        });
+        core = new THREE.Mesh(coreGeom, coreMat);
+        group.add(core);
+
+        // Wireframe edges on rare core
+        const coreEdgesGeom = new THREE.EdgesGeometry(coreGeom);
+        const coreEdgesMat = new THREE.LineBasicMaterial({ color: currentTheme.colorHexSecondary, linewidth: 2 });
+        const coreWireframe = new THREE.LineSegments(coreEdgesGeom, coreEdgesMat);
+        core.add(coreWireframe);
+
+        // Dual Noble Neon Halo Rings
+        const ringGeom1 = new THREE.TorusGeometry(1.5, 0.038, 16, 48);
+        const ringMat1 = new THREE.MeshStandardMaterial({
+          color: currentTheme.colorHex,
+          emissive: currentTheme.colorHex,
+          emissiveIntensity: 1.2,
+          metalness: 0.9,
+          roughness: 0.1
+        });
+        outerRing = new THREE.Mesh(ringGeom1, ringMat1);
+        outerRing.rotation.x = Math.PI / 3;
+        group.add(outerRing);
+
+        const ringGeom2 = new THREE.TorusGeometry(1.9, 0.03, 16, 48);
+        const ringMat2 = new THREE.MeshStandardMaterial({
+          color: currentTheme.colorHexSecondary,
+          emissive: currentTheme.colorHexSecondary,
+          emissiveIntensity: 1.0,
+          metalness: 0.9,
+          roughness: 0.1
+        });
+        innerRing = new THREE.Mesh(ringGeom2, ringMat2);
+        innerRing.rotation.y = Math.PI / 3;
+        group.add(innerRing);
       }
 
       // Calculate safe spawning position far from origin coordinates (0, 0)
@@ -1664,10 +1737,11 @@
 
       group.position.set(rx, ry, rz);
       
-      // Save identifying parameters for collision/raycast hits
+      // Save identifying parameters for collision/raycast hits on all child elements
       group.userData = { type: "enemy", id };
-      core.userData = { type: "enemy", id };
-      outerRing.userData = { type: "enemy", id };
+      group.traverse(child => {
+        child.userData = { type: "enemy", id };
+      });
 
       scene.add(group);
 
@@ -1675,6 +1749,8 @@
         group,
         core,
         outerRing,
+        innerRing,
+        symbolSprite,
         isRare,
         char: enemyChar,
         canvas: enemyCanvas,
@@ -1686,7 +1762,18 @@
       });
     }
 
-    // ROLLING GEOMETRIC OBSTACLES SYSTEM
+    function cleanupEnemyGroup(enemy) {
+      if (!enemy || !enemy.group) return;
+      scene.remove(enemy.group);
+      enemy.group.traverse(child => {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) {
+          if (child.material.map) child.material.map.dispose();
+          if (child.material.emissiveMap) child.material.emissiveMap.dispose();
+          child.material.dispose();
+        }
+      });
+    }
     function spawnAllRollingShapes() {
       // Clear old rolling shapes
       rollingShapes.forEach(rs => {
@@ -1735,13 +1822,13 @@
       const isSecondary = Math.random() > 0.5;
       const color = isSecondary ? currentTheme.colorHexSecondary : currentTheme.colorHex;
       
-      // Custom solid cyber-material
+      // Custom solid edel-neon material
       const material = new THREE.MeshStandardMaterial({
-        color: 0x05040a,
+        color: 0x060912,
         emissive: color,
-        emissiveIntensity: 1.8,
+        emissiveIntensity: 1.1,
         roughness: 0.1,
-        metalness: 0.9,
+        metalness: 0.95,
         flatShading: true
       });
       
@@ -2111,17 +2198,7 @@
 
               if (idx !== -1) {
                 const enemy = enemies[idx];
-                scene.remove(enemy.group);
-                if (enemy.core.geometry) enemy.core.geometry.dispose();
-                if (enemy.core.material) {
-                  if (enemy.core.material.map) enemy.core.material.map.dispose();
-                  enemy.core.material.dispose();
-                }
-                if (enemy.outerRing.geometry) enemy.outerRing.geometry.dispose();
-                if (enemy.outerRing.material) {
-                  if (enemy.outerRing.material.map) enemy.outerRing.material.map.dispose();
-                  enemy.outerRing.material.dispose();
-                }
+                cleanupEnemyGroup(enemy);
 
                 enemies.splice(idx, 1);
                 
@@ -2140,7 +2217,7 @@
                 // Sende Score Update Event an das Parent Window
                 sendIframeMessage('SHOOTER_SCORE_UPDATE', { score: score });
 
-                // Respawn new rogue octahedron core
+                // Respawn new rogue node
                 spawnEnemyNode(hitId);
               }
             }
@@ -2178,11 +2255,24 @@
       // Enemies movement tracking and chasing calculations
       enemies.forEach(enemy => {
         // rotation spin
-        enemy.core.rotation.x += delta * 1.5;
-        enemy.core.rotation.y += delta * 1.1;
+        if (enemy.core) {
+          enemy.core.rotation.x += delta * 1.2;
+          enemy.core.rotation.y += delta * 1.5;
+        }
 
-        enemy.outerRing.rotation.y -= delta * 0.8;
-        enemy.outerRing.rotation.z += delta * 1.2;
+        if (enemy.outerRing) {
+          enemy.outerRing.rotation.y -= delta * 0.9;
+          enemy.outerRing.rotation.z += delta * 1.1;
+        }
+
+        if (enemy.innerRing) {
+          enemy.innerRing.rotation.x += delta * 1.1;
+          enemy.innerRing.rotation.y -= delta * 1.3;
+        }
+
+        if (enemy.symbolSprite) {
+          enemy.symbolSprite.rotation.y += delta * 0.8;
+        }
 
         // Bobbing floating motion above terrain
         const enemyGroundY = getGroundHeight(enemy.group.position.x, enemy.group.position.z);
@@ -2203,17 +2293,7 @@
 
             // Explosive discharge reset enemy far away
             createExplosionEffect(enemy.group.position, true);
-            scene.remove(enemy.group);
-            if (enemy.core.geometry) enemy.core.geometry.dispose();
-            if (enemy.core.material) {
-              if (enemy.core.material.map) enemy.core.material.map.dispose();
-              enemy.core.material.dispose();
-            }
-            if (enemy.outerRing.geometry) enemy.outerRing.geometry.dispose();
-            if (enemy.outerRing.material) {
-              if (enemy.outerRing.material.map) enemy.outerRing.material.map.dispose();
-              enemy.outerRing.material.dispose();
-            }
+            cleanupEnemyGroup(enemy);
 
             const hitId = enemy.id;
             enemies = enemies.filter(e => e.id !== hitId);
