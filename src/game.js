@@ -169,8 +169,9 @@
     let gameOver = false;
     let isLocked = false;
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-    let controlMode = isTouchDevice ? 'touch' : 'lock';
-    let usePointerLock = controlMode === 'lock';
+    // Default to 'free' mouse mode for 100% iframe compatibility (no pointer lock / fullscreen needed)
+    let controlMode = isTouchDevice ? 'touch' : 'free';
+    let usePointerLock = false;
     
     // Joystick and touch state variables
     let joystickActive = false;
@@ -488,6 +489,10 @@
         freeBtn.className = "py-2.5 px-1.5 rounded-lg border text-[10px] font-bold transition-all text-center flex flex-col items-center justify-center gap-0.5 cursor-pointer bg-cyan-500/20 text-cyan-300 border-cyan-400 border-glow-cyan";
         usePointerLock = false;
       }
+
+      if (renderer && renderer.domElement) {
+        renderer.domElement.style.cursor = (controlMode === 'free') ? 'crosshair' : 'default';
+      }
     }
 
     if (freeBtn && lockBtn && touchBtn) {
@@ -707,29 +712,37 @@
     renderThemeButtons();
 
     initBtn.addEventListener("click", () => {
-      if (usePointerLock) {
-        if (controls) {
+      if (controlMode === 'lock' && usePointerLock && controls) {
+        try {
           controls.lock();
+        } catch (err) {
+          console.warn("Pointer lock failed, falling back to free mouse mode:", err);
+          usePointerLock = false;
+          controlMode = 'free';
+          updateControlUI();
         }
+      }
+      isLocked = true;
+      if (!gameStarted) {
+        startMainGameplay();
       } else {
-        isLocked = true;
-        if (!gameStarted) {
-          startMainGameplay();
-        } else {
-          startOverlay.classList.add("hidden");
-        }
+        startOverlay.classList.add("hidden");
       }
     });
 
     rebootBtn.addEventListener("click", () => {
-      if (usePointerLock) {
-        if (controls) {
+      if (controlMode === 'lock' && usePointerLock && controls) {
+        try {
           controls.lock();
+        } catch (err) {
+          console.warn("Pointer lock failed, falling back to free mouse mode:", err);
+          usePointerLock = false;
+          controlMode = 'free';
+          updateControlUI();
         }
-      } else {
-        isLocked = true;
-        startMainGameplay();
       }
+      isLocked = true;
+      startMainGameplay();
     });
 
     const copyCodeBtn = document.getElementById("copy-code-btn");
@@ -1363,13 +1376,32 @@
         }
       });
 
-      // Canvas / Overlay click handler to easily re-acquire Mouse Lock during active game
+      // Handle iframe pointer lock rejection automatically
+      document.addEventListener("pointerlockerror", () => {
+        console.warn("Pointer lock error/restriction (e.g. iframe context). Switching to Free Mouse mode.");
+        usePointerLock = false;
+        controlMode = 'free';
+        updateControlUI();
+        isLocked = true;
+        startOverlay.classList.add("hidden");
+        if (!gameStarted || gameOver) {
+          startMainGameplay();
+        }
+      });
+
+      // Canvas / Overlay click handler to easily start or resume
       window.addEventListener("click", (e) => {
+        if (settingsPanel && settingsPanel.contains(e.target)) return;
+        if (settingsToggleBtn && settingsToggleBtn.contains(e.target)) return;
+
         if (usePointerLock && gameStarted && !gameOver && !isLocked) {
-          if (settingsPanel && settingsPanel.contains(e.target)) return;
-          if (settingsToggleBtn && settingsToggleBtn.contains(e.target)) return;
           if (controls) {
             try { controls.lock(); } catch (err) {}
+          }
+        } else if (!usePointerLock && gameStarted && !gameOver && !isLocked) {
+          if (e.target === renderer.domElement) {
+            isLocked = true;
+            startOverlay.classList.add("hidden");
           }
         }
       });
@@ -1498,9 +1530,20 @@
 
           previousLookPosition = { x: e.clientX, y: e.clientY };
         } else {
-          if (!isDragging) return;
-          const deltaX = e.clientX - previousPointerPosition.x;
-          const deltaY = e.clientY - previousPointerPosition.y;
+          // Free Mouse / Iframe Mode: rotate camera when dragging OR when moving over canvas
+          const isOverCanvas = (e.target === renderer.domElement);
+          if (!isDragging && !isOverCanvas) return;
+
+          let deltaX = 0;
+          let deltaY = 0;
+
+          if (e.movementX !== undefined && e.movementY !== undefined && (e.movementX !== 0 || e.movementY !== 0)) {
+            deltaX = e.movementX;
+            deltaY = e.movementY;
+          } else {
+            deltaX = e.clientX - previousPointerPosition.x;
+            deltaY = e.clientY - previousPointerPosition.y;
+          }
 
           camera.rotation.y -= deltaX * 0.003;
           camera.rotation.x -= deltaY * 0.003;
