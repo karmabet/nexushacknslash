@@ -1007,6 +1007,9 @@
       // Camera
       camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
       camera.position.set(0, defaultPlayerHeight, 0);
+      // Yaw around world Y first, then pitch around local X, so diagonal
+      // mouse movement never introduces roll (default XYZ order does).
+      camera.rotation.order = 'YXZ';
 
       // Renderer
       renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
