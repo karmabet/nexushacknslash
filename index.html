@@ -14,39 +14,12 @@
   <meta property="og:type" content="website" />
   <meta property="og:title" content="NEXUS HACKnSLASH - 3D Cyber Shooter" />
   <meta property="og:description" content="Intense 3D browser-based neon shooter. Destroy rogue cores, dodge rolling geometry obstacles, and conquer the cyberspace grid." />
-  <meta property="og:image" content="https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=600" />
   
   <!-- Twitter -->
   <meta property="twitter:card" content="summary_large_image" />
   <meta property="twitter:title" content="NEXUS HACKnSLASH - 3D Cyber Shooter" />
   <meta property="twitter:description" content="Intense 3D browser-based neon shooter. Destroy rogue cores, dodge rolling geometry obstacles, and conquer cyberspace." />
-  <meta property="twitter:image" content="https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=600" />
   
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Lucide Icons CDN -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-
-  <!-- Tailwind Custom Config -->
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Orbitron', 'sans-serif'],
-            mono: ['"Share Tech Mono"', 'monospace'],
-          }
-        }
-      }
-    }
-  </script>
-
   <style>
     :root {
       --theme-color: #00f0ff;
@@ -126,21 +99,15 @@
     }
   </style>
 
-  <!-- Three.js + Postprocessing CDNs (All in compatible r128 version) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
-  
-  <!-- Post-processing pipeline -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
-  
-  <!-- Shaders -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
-  
-  <!-- Unreal Bloom Pass -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+  <script src="./vendor/three.min.js"></script>
+  <script src="./vendor/PointerLockControls.js"></script>
+  <script src="./vendor/EffectComposer.js"></script>
+  <script src="./vendor/RenderPass.js"></script>
+  <script src="./vendor/ShaderPass.js"></script>
+  <script src="./vendor/CopyShader.js"></script>
+  <script src="./vendor/LuminosityHighPassShader.js"></script>
+  <script src="./vendor/UnrealBloomPass.js"></script>
+  <script src="./vendor/lucide.min.js"></script>
 </head>
 <body class="bg-[#030108] text-white overflow-hidden w-screen h-screen font-sans select-none">
 
@@ -182,14 +149,14 @@
   </div>
 
   <!-- SOUND STATUS BUTTON -->
-  <button id="sound-toggle-btn" class="absolute top-6 left-1/2 -translate-x-1/2 z-30 hidden backdrop-blur-md bg-slate-950/40 border border-cyan-500/30 text-cyan-400 px-4 py-2 rounded-full font-mono text-xs border-glow-cyan hover:bg-cyan-950/30 transition-all cursor-pointer flex items-center gap-2">
+  <button id="sound-toggle-btn" class="absolute top-24 sm:top-6 left-1/2 -translate-x-1/2 z-30 hidden backdrop-blur-md bg-slate-950/40 border border-cyan-500/30 text-cyan-400 px-4 py-2 rounded-full font-mono text-xs border-glow-cyan hover:bg-cyan-950/30 transition-all cursor-pointer flex items-center gap-2">
     <i data-lucide="volume-2" class="w-4 h-4"></i>
     <span>AUDIO: ON</span>
   </button>
 
   <!-- OVERLAY 1: START SCREEN / BREACH PROTOCOL -->
   <div id="start-overlay" class="absolute inset-0 z-40 flex items-center justify-center bg-[#04010e]/90 backdrop-blur-md transition-all duration-500">
-    <div class="max-w-lg w-full mx-4 bg-slate-950/70 border border-cyan-500/30 p-8 rounded-xl border-glow-cyan text-center relative overflow-hidden">
+    <div class="max-w-lg w-full mx-4 max-h-[94dvh] overflow-y-auto bg-slate-950/70 border border-cyan-500/30 p-8 rounded-xl border-glow-cyan text-center relative overflow-hidden">
       <!-- Grid backdrop styling -->
       <div class="absolute inset-0 bg-[linear-gradient(rgba(6,182,212,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(6,182,212,0.05)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none"></div>
 
@@ -235,22 +202,23 @@
         <!-- CONTROL MODE SELECTION -->
         <div class="mb-6 text-left font-mono text-xs">
           <span class="text-slate-500 block mb-2 tracking-widest text-center uppercase text-[10px]">Steuerungs-Modus wählen:</span>
-          <div class="grid grid-cols-3 gap-2">
+          <div class="grid grid-cols-2 gap-2">
             <button type="button" id="control-free-btn" class="py-2.5 px-1.5 rounded-lg border text-[10px] font-bold transition-all text-center flex flex-col items-center justify-center gap-0.5 cursor-pointer bg-cyan-500/20 text-cyan-300 border-cyan-400 border-glow-cyan">
               <span>FREIE MAUS</span>
-              <span class="text-[7px] text-cyan-300/60 font-normal leading-none">iFrame / Webseiten</span>
+              <span class="text-[7px] text-cyan-300/60 font-normal leading-none">Rechts ziehen: umsehen</span>
             </button>
             <button type="button" id="control-lock-btn" class="py-2.5 px-1.5 rounded-lg border text-[10px] font-bold transition-all text-center flex flex-col items-center justify-center gap-0.5 cursor-pointer bg-slate-950/20 border-slate-800 text-slate-500 hover:text-slate-400 hover:border-slate-700">
               <span>MAUS-LOCK</span>
-              <span class="text-[7px] text-slate-500 font-normal leading-none">FPS Vollbild-Sperre</span>
+              <span class="text-[7px] text-slate-500 font-normal leading-none">FPS / ESC pausiert</span>
             </button>
             <button type="button" id="control-touch-btn" class="py-2.5 px-1.5 rounded-lg border text-[10px] font-bold transition-all text-center flex flex-col items-center justify-center gap-0.5 cursor-pointer bg-slate-950/20 border-slate-800 text-slate-500 hover:text-slate-400 hover:border-slate-700">
               <span>TOUCH MODE</span>
-              <span class="text-[7px] text-slate-500 font-normal leading-none">Virtueller Stick</span>
+              <span class="text-[7px] text-slate-500 font-normal leading-none">Automatisch auf Mobilgeräten</span>
             </button>
           </div>
         </div>
 
+        <label class="block text-left text-xs text-cyan-400 font-mono mb-4">MOUSE SENSITIVITY <input id="mouse-sensitivity" type="range" min="0.5" max="2" step="0.1" class="w-full accent-cyan-400" /></label>
         <!-- Start Button -->
         <button id="initialize-btn" class="w-full py-4 bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-400 hover:to-sky-500 text-slate-950 font-bold tracking-widest rounded-lg shadow-lg hover:shadow-cyan-500/20 active:scale-[0.98] transition-all cursor-pointer uppercase text-sm border-glow-cyan">
           ESTABLISH CONNECTION
@@ -343,7 +311,7 @@
   </div>
 
   <!-- HUD IN-GAME OVERLAYS (ULTRA-MINIMALIST CYBERPUNK) -->
-  <div id="hud-overlay" class="absolute inset-x-0 top-0 pointer-events-none z-30 hidden p-6 flex justify-between items-start font-sans">
+  <div id="hud-overlay" class="absolute inset-x-0 top-0 pointer-events-none z-30 hidden p-3 sm:p-6 flex justify-between items-start font-sans">
     
     <!-- LEFT: KILLS / CORES -->
     <div class="flex flex-col">
@@ -357,7 +325,7 @@
     </div>
 
     <!-- RIGHT: SHIELD INTEGRITY -->
-    <div class="flex flex-col items-end w-48 sm:w-64">
+    <div class="flex flex-col items-end w-36 sm:w-64">
       <div class="flex justify-between items-center w-full mb-1">
         <span class="text-[10px] text-pink-400/70 tracking-widest uppercase font-mono">SHIELD INTEGRITY</span>
         <span id="hud-health-text" class="text-xs font-bold font-mono text-cyan-400">100%</span>

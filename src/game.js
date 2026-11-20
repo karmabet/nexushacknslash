@@ -1,3 +1,5 @@
+import './standalone.css';
+import { mobileControls, movementAxes } from './input.js';
     // Initialize Lucide Icons
     lucide.createIcons();
 
@@ -168,9 +170,11 @@
     let gameStarted = false;
     let gameOver = false;
     let isLocked = false;
-    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    const isTouchDevice = mobileControls({ touchPoints: navigator.maxTouchPoints, coarse: matchMedia('(pointer: coarse)').matches, fine: matchMedia('(any-pointer: fine)').matches, mobile: /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) });
     // Default to 'free' mouse mode for 100% iframe compatibility (no pointer lock / fullscreen needed)
-    let controlMode = isTouchDevice ? 'touch' : 'free';
+    let controlMode = isTouchDevice ? 'touch' : 'lock';
+    let fireHeld = false;
+    let mouseSensitivity = Math.max(0.5, Math.min(2, Number(localStorage.getItem('nexus_shooter_sensitivity')) || 1));
     let usePointerLock = false;
     
     // Joystick and touch state variables
@@ -179,6 +183,7 @@
     let joystickStartPos = { x: 0, y: 0 };
     let moveVector = { x: 0, y: 0 };
     let lookPointerId = null;
+    let isDragging = false;
     let previousLookPosition = { x: 0, y: 0 };
 
     let timerInterval = null;
@@ -473,6 +478,9 @@
 
     function updateControlUI() {
       if (!freeBtn || !lockBtn || !touchBtn) return;
+      touchBtn.hidden = !isTouchDevice;
+      touchBtn.style.display = isTouchDevice ? "" : "none";
+      document.getElementById("touch-controls")?.classList.toggle("hidden", controlMode !== "touch" || !isLocked);
       
       // Reset all buttons to unselected
       freeBtn.className = "py-2.5 px-1.5 rounded-lg border text-[10px] font-bold transition-all text-center flex flex-col items-center justify-center gap-0.5 cursor-pointer bg-slate-950/20 border-slate-800 text-slate-500 hover:text-slate-400 hover:border-slate-700";
@@ -655,7 +663,7 @@
       updateControlUI();
       
       // Rerender buttons to update selected class styling
-      renderThemeButtons();
+    renderThemeButtons();
 
       addLog(`SYSTEM_COLORWAY_UPDATED: ${theme.name}`);
     }
@@ -711,6 +719,23 @@
 
     renderThemeButtons();
 
+      const sensitivity = document.getElementById('mouse-sensitivity');
+    sensitivity.value = String(mouseSensitivity);
+    sensitivity.addEventListener('input', () => { mouseSensitivity = Number(sensitivity.value); localStorage.setItem('nexus_shooter_sensitivity', String(mouseSensitivity)); if (controls) controls.pointerSpeed = mouseSensitivity; });
+    function clearInput() {
+      keys = {}; fireHeld = false; isDragging = false; moveVector = {x:0,y:0}; lookPointerId = null; joystickActive = false;
+      const knob = document.getElementById('joystick-knob'); if (knob) knob.style.transform = 'translate(0px, 0px)';
+    }
+    function pauseGame() {
+      clearInput(); if (!gameStarted || gameOver) return;
+      isLocked = false; controls?.unlock(); updateControlUI();
+      startOverlay.classList.remove('hidden');
+      startOverlay.querySelector('h1').innerText = 'UPLINK_PAUSED'; initBtn.innerText = 'RESUME PROTOCOL';
+    }
+    window.addEventListener('blur', pauseGame);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
+    window.addEventListener('message', e => { if(e.source === parent && e.data?.type === 'nexus-hacknslash-pause') pauseGame(); });
+
     initBtn.addEventListener("click", () => {
       if (controlMode === 'lock' && usePointerLock && controls) {
         try {
@@ -763,6 +788,7 @@
     }
 
     function startMainGameplay() {
+      clearInput();
       // Setup Initial State
       score = 0;
       health = 100;
@@ -790,9 +816,9 @@
       if (controlsHint) {
         controlsHint.classList.remove("hidden");
         if (controlMode === 'touch') {
-          controlsHint.innerHTML = "<span>JOYSTICK: MOVE | SWIPE RIGHT SIDE: LOOK | BUTTONS</span>";
+          controlsHint.classList.add("hidden");
         } else {
-          controlsHint.innerHTML = "<span>WASD: Move | Mouse: Look & Shoot | SPACE: Jump</span>";
+          controlsHint.innerHTML = "<span>WASD / ARROWS: MOVE | MOUSE: AIM | HOLD LEFT: FIRE | SPACE: JUMP | ESC: PAUSE</span>";
         }
       }
 
@@ -1358,6 +1384,7 @@
 
       // POINTER LOCK CONTROLS
       controls = new THREE.PointerLockControls(camera, renderer.domElement);
+      controls.pointerSpeed = mouseSensitivity;
 
       controls.addEventListener("lock", () => {
         isLocked = true;
@@ -1397,6 +1424,7 @@
         if (settingsPanel && settingsPanel.contains(e.target)) return;
         if (settingsToggleBtn && settingsToggleBtn.contains(e.target)) return;
 
+        if (e.target !== renderer.domElement) return;
         if (usePointerLock && gameStarted && !gameOver && !isLocked) {
           if (controls) {
             try { controls.lock(); } catch (err) {}
@@ -1418,7 +1446,7 @@
       // 1. Joystick movement tracking
       if (joystickZone && joystickKnob) {
         joystickZone.addEventListener("pointerdown", (e) => {
-          if (controlMode !== 'touch') return;
+          if (controlMode !== 'touch' || !isLocked || gameOver || joystickActive) return;
           joystickActive = true;
           joystickPointerId = e.pointerId;
           const rect = joystickZone.getBoundingClientRect();
@@ -1455,7 +1483,7 @@
         });
 
         const resetJoystick = (e) => {
-          if (!joystickActive) return;
+          if (!joystickActive || (e?.pointerId !== undefined && e.pointerId !== joystickPointerId)) return;
           joystickActive = false;
           joystickPointerId = null;
           joystickKnob.style.transform = `translate(0px, 0px)`;
@@ -1467,6 +1495,7 @@
 
         joystickZone.addEventListener("pointerup", resetJoystick);
         joystickZone.addEventListener("pointercancel", resetJoystick);
+        joystickZone.addEventListener("lostpointercapture", resetJoystick);
       }
 
       // 2. Touch Shoot & Jump buttons
@@ -1479,6 +1508,8 @@
           }
         });
       }
+
+      for (const event of ["pointerup", "pointercancel", "lostpointercapture"]) touchShootBtn?.addEventListener(event, () => { fireHeld = false; });
 
       if (touchJumpBtn) {
         touchJumpBtn.addEventListener("pointerdown", (e) => {
@@ -1535,7 +1566,7 @@
         } else {
           // Free Mouse / Iframe Mode: rotate camera when dragging OR when moving over canvas
           const isOverCanvas = (e.target === renderer.domElement);
-          if (!isDragging && !isOverCanvas) return;
+          if (!isDragging) return;
 
           let deltaX = 0;
           let deltaY = 0;
@@ -1548,8 +1579,8 @@
             deltaY = e.clientY - previousPointerPosition.y;
           }
 
-          camera.rotation.y -= deltaX * 0.003;
-          camera.rotation.x -= deltaY * 0.003;
+          camera.rotation.y -= deltaX * 0.002 * mouseSensitivity;
+          camera.rotation.x -= deltaY * 0.002 * mouseSensitivity;
           camera.rotation.x = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, camera.rotation.x));
 
           previousPointerPosition = { x: e.clientX, y: e.clientY };
@@ -1566,44 +1597,23 @@
       window.addEventListener("pointerup", stopLooking);
       window.addEventListener("pointercancel", stopLooking);
 
-      // KEYBOARD TRACKING
-      window.addEventListener("keydown", (e) => {
-        keys[e.key.toLowerCase()] = true;
+      // Input belongs to gameplay, never to settings or inactive windows.
+      const editable = target => target?.closest?.('input, textarea, select, [contenteditable="true"]');
+      window.addEventListener('keydown', e => {
+        if (editable(e.target)) return;
+        if (e.code === 'Escape' && gameStarted && !gameOver) { e.preventDefault(); pauseGame(); return; }
+        if (!isLocked || gameOver) return;
+        if (['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
         keys[e.code.toLowerCase()] = true;
-
-        if (e.code === "Space" && !isJumping && isLocked && !gameOver) {
-          isJumping = true;
-          playerVelocityY = jumpPower;
-          addLog("AUXILIARY JET THRUST: JUMPED");
-        }
-
-        // ESC key pausing in Free Mouse mode
-        if (e.key === "Escape" && gameStarted && !gameOver && !usePointerLock) {
-          if (isLocked) {
-            isLocked = false;
-            startOverlay.classList.remove("hidden");
-            const title = startOverlay.querySelector("h1");
-            const btn = startOverlay.querySelector("button");
-            if (title) title.innerText = "UPLINK_PAUSED";
-            if (btn) btn.innerText = "RESUME PROTOCOL";
-          } else {
-            isLocked = true;
-            startOverlay.classList.add("hidden");
-          }
-        }
+        if (e.code === 'Space' && !e.repeat && !isJumping) { isJumping = true; playerVelocityY = jumpPower; }
       });
-
-      window.addEventListener("keyup", (e) => {
-        keys[e.key.toLowerCase()] = false;
-        keys[e.code.toLowerCase()] = false;
+      window.addEventListener('keyup', e => { keys[e.code.toLowerCase()] = false; });
+      renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
+      renderer.domElement.addEventListener('pointerdown', e => {
+        if (e.pointerType !== 'touch' && e.button === 0 && isLocked && !gameOver) { fireHeld = true; fireLaserBlaster(); }
       });
-
-      // MOUSE CLICKS
-      window.addEventListener("mousedown", (e) => {
-        if (e.button === 0 && isLocked && !gameOver) {
-          fireLaserBlaster();
-        }
-      });
+      window.addEventListener('pointerup', e => { if (e.button === 0) fireHeld = false; });
+      window.addEventListener('pointercancel', () => { fireHeld = false; });
 
       // WINDOW RESIZING
       window.addEventListener("resize", () => {
@@ -1963,6 +1973,7 @@
 
     // ACCESS CRASH TRIGGER
     function triggerGameOver() {
+      clearInput();
       gameOver = true;
       isLocked = false;
       controls.unlock();
@@ -2440,10 +2451,10 @@
         const right = new THREE.Vector3();
         right.crossVectors(forward, camera.up).normalize();
 
-        if (keys["w"] || keys["arrowup"]) moveVec.add(forward);
-        if (keys["s"] || keys["arrowdown"]) moveVec.sub(forward);
-        if (keys["d"] || keys["arrowright"]) moveVec.add(right);
-        if (keys["a"] || keys["arrowleft"]) moveVec.sub(right);
+        if (fireHeld) fireLaserBlaster();
+        const axes = movementAxes(keys);
+        moveVec.addScaledVector(forward, axes.y);
+        moveVec.addScaledVector(right, axes.x);
 
         // Touch control movement joystick input
         if (controlMode === 'touch') {
@@ -2456,7 +2467,8 @@
         }
 
         if (moveVec.lengthSq() > 0) {
-          moveVec.normalize().multiplyScalar(speed * delta);
+          if (moveVec.lengthSq() > 1) moveVec.normalize();
+          moveVec.multiplyScalar(speed * delta);
 
           // Test sliding collision on X coordinate separately
           const oldX = camera.position.x;
@@ -2517,3 +2529,5 @@
 
     // RUN THE HACKER GRID ENGINE
     initEngine();
+    document.documentElement.dataset.gameReady = "true";
+    if (parent !== window) parent.postMessage({type:"nexus-hacknslash-ready"}, "*");
