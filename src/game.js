@@ -1400,7 +1400,7 @@ import { mobileControls, movementAxes } from './input.js';
         if (usePointerLock && gameStarted && !gameOver) {
           startOverlay.classList.remove("hidden");
           const title = startOverlay.querySelector("h1");
-          const btn = startOverlay.querySelector("button");
+          const btn = initBtn;
           if (title) title.innerText = "UPLINK_PAUSED";
           if (btn) btn.innerText = "RESUME PROTOCOL";
         }
