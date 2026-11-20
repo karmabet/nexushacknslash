@@ -1,3 +1,4 @@
+import { difficultyFor } from './difficulty.js';
 import './standalone.css';
 import { mobileControls, movementAxes } from './input.js';
     // Initialize Lucide Icons
@@ -165,6 +166,9 @@ import { mobileControls, movementAxes } from './input.js';
     let highScore = parseInt(localStorage.getItem("cyber_shooter_high_score") || "0", 10);
     let health = 100;
     let timeElapsed = 0;
+    let difficulty = difficultyFor(0,0);
+    let nextEnemyId = 7;
+    let lastReinforcement = 0;
     let shotsFired = 0;
     let shotsHit = 0;
     let gameStarted = false;
@@ -748,6 +752,7 @@ import { mobileControls, movementAxes } from './input.js';
         }
       }
       isLocked = true;
+      updateControlUI();
       if (!gameStarted) {
         startMainGameplay();
       } else {
@@ -793,12 +798,14 @@ import { mobileControls, movementAxes } from './input.js';
       score = 0;
       health = 100;
       timeElapsed = 0;
+      difficulty = difficultyFor(0,0);nextEnemyId = 7;lastReinforcement = 0;
       shotsFired = 0;
       shotsHit = 0;
       gameOver = false;
       isJumping = false;
       playerVelocityY = 0;
 
+      document.getElementById("hud-threat").innerText = "THREAT 1 · HOSTILES 7/7";
       // Reset HUD Values
       document.getElementById("hud-score").innerText = "0";
       document.getElementById("hud-health-text").innerText = "100%";
@@ -877,6 +884,11 @@ import { mobileControls, movementAxes } from './input.js';
       timerInterval = setInterval(() => {
         if (isLocked && !gameOver) {
           timeElapsed++;
+          const previousTier = difficulty.tier;
+          difficulty = difficultyFor(timeElapsed, score);
+          if (difficulty.tier > previousTier) addLog('THREAT LEVEL ' + (difficulty.tier+1) + ': REINFORCEMENTS INBOUND');
+          if (enemies.length < difficulty.enemies && timeElapsed-lastReinforcement >= 3) { spawnEnemyNode(nextEnemyId++);lastReinforcement=timeElapsed; }
+          document.getElementById('hud-threat').innerText = 'THREAT ' + (difficulty.tier+1) + ' · HOSTILES ' + enemies.length + '/' + difficulty.enemies;
           const mins = Math.floor(timeElapsed / 60).toString().padStart(2, "0");
           const secs = (timeElapsed % 60).toString().padStart(2, "0");
           document.getElementById("hud-time").innerText = `${mins}:${secs}`;
@@ -1503,8 +1515,8 @@ import { mobileControls, movementAxes } from './input.js';
         touchShootBtn.addEventListener("pointerdown", (e) => {
           e.preventDefault();
           e.stopPropagation();
-          if (isLocked && !gameOver) {
-            fireLaserBlaster();
+          if (controlMode === "touch" && isLocked && !gameOver) {
+            fireHeld = true;touchShootBtn.setPointerCapture(e.pointerId);fireLaserBlaster();
           }
         });
       }
@@ -1524,12 +1536,11 @@ import { mobileControls, movementAxes } from './input.js';
       }
 
       // 3. Look dragging for both Free Mouse and Touch Mode
-      let isDragging = false;
       let previousPointerPosition = { x: 0, y: 0 };
 
       window.addEventListener("pointerdown", (e) => {
         if (!gameStarted || gameOver || !isLocked) return;
-        if (usePointerLock) return;
+        if (usePointerLock || e.target?.closest?.('button, input, #settings-panel')) return;
 
         if (controlMode === 'touch') {
           // Ignore left 45% screen to let joystick work
@@ -1540,7 +1551,9 @@ import { mobileControls, movementAxes } from './input.js';
           if (touchJumpBtn && touchJumpBtn.contains(e.target)) return;
         } else {
           // Standard FREE MOUSE mode: must click on the canvas to begin drag
-          if (e.target !== renderer.domElement) return;
+          if (e.target !== renderer.domElement || e.button !== 2) return;
+          e.preventDefault();
+          renderer.domElement.setPointerCapture(e.pointerId);
         }
 
         lookPointerId = e.pointerId;
@@ -1656,6 +1669,12 @@ import { mobileControls, movementAxes } from './input.js';
     }
 
     function spawnEnemyNode(id) {
+      let rx=0, rz=0, valid=false;
+      for(let attempt=0;attempt<64;attempt++) {
+        rx=(Math.random()-0.5)*190;rz=(Math.random()-0.5)*190;
+        if(Math.hypot(rx-camera.position.x,rz-camera.position.z)>=22 && !verifyMovementCollision(new THREE.Vector3(rx,0,rz))) {valid=true;break;}
+      }
+      if(!valid)return;
       const group = new THREE.Group();
       const isRare = Math.random() < 0.20; // 20% chance of being the rare geometric enemy
 
@@ -1783,12 +1802,6 @@ import { mobileControls, movementAxes } from './input.js';
         group.add(innerRing);
       }
 
-      // Calculate safe spawning position far from origin coordinates (0, 0)
-      let rx = 0, rz = 0;
-      while (Math.sqrt(rx * rx + rz * rz) < 22) {
-        rx = (Math.random() - 0.5) * 150;
-        rz = (Math.random() - 0.5) * 150;
-      }
       const ry = 2.5 + Math.random() * 5.0; // floating height
 
       group.position.set(rx, ry, rz);
@@ -2340,8 +2353,8 @@ import { mobileControls, movementAxes } from './input.js';
         toPlayer.y = 0; // Lock to flight horizontal plane
         const dist = toPlayer.length();
 
-        if (dist < 45 && isLocked && !gameOver) {
-          toPlayer.normalize().multiplyScalar(enemy.speed * delta);
+        if (dist < difficulty.chaseRange && isLocked && !gameOver) {
+          toPlayer.normalize().multiplyScalar(enemy.speed * difficulty.speed * delta);
           enemy.group.position.add(toPlayer);
 
           // Close proximity damage trigger
