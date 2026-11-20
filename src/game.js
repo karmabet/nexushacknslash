@@ -174,7 +174,7 @@ import { mobileControls, movementAxes } from './input.js';
     // Default to 'free' mouse mode for 100% iframe compatibility (no pointer lock / fullscreen needed)
     let controlMode = isTouchDevice ? 'touch' : 'lock';
     let fireHeld = false;
-    let mouseSensitivity = Number(localStorage.getItem('nexus_shooter_sensitivity')) || 1;
+    let mouseSensitivity = Math.max(0.5, Math.min(2, Number(localStorage.getItem('nexus_shooter_sensitivity')) || 1));
     let usePointerLock = false;
     
     // Joystick and touch state variables
@@ -183,6 +183,7 @@ import { mobileControls, movementAxes } from './input.js';
     let joystickStartPos = { x: 0, y: 0 };
     let moveVector = { x: 0, y: 0 };
     let lookPointerId = null;
+    let isDragging = false;
     let previousLookPosition = { x: 0, y: 0 };
 
     let timerInterval = null;
@@ -722,7 +723,7 @@ import { mobileControls, movementAxes } from './input.js';
     sensitivity.value = String(mouseSensitivity);
     sensitivity.addEventListener('input', () => { mouseSensitivity = Number(sensitivity.value); localStorage.setItem('nexus_shooter_sensitivity', String(mouseSensitivity)); if (controls) controls.pointerSpeed = mouseSensitivity; });
     function clearInput() {
-      keys = {}; fireHeld = false; moveVector = {x:0,y:0}; lookPointerId = null; joystickActive = false;
+      keys = {}; fireHeld = false; isDragging = false; moveVector = {x:0,y:0}; lookPointerId = null; joystickActive = false;
       const knob = document.getElementById('joystick-knob'); if (knob) knob.style.transform = 'translate(0px, 0px)';
     }
     function pauseGame() {
